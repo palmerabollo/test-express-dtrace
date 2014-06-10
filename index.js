@@ -1,46 +1,66 @@
 var express = require('express'),
+    // middlewares as extra dependencies
+    responseTime = require('response-time'),
+    bodyParser = require('body-parser'),
     crypto = require('crypto'),
     logger = require('bunyan').createLogger({name: 'myapp'});
 
 var app = express();
 
-app.configure(function () {
-  app.use(express.responseTime());
-  app.use(express.urlencoded());
+// no app.configure
 
-  app.use(app.router);
-  app.use(express.static(__dirname + '/public'));
-});
+app.use(responseTime());
+app.use(bodyParser());
+
+app.use(express.static(__dirname + '/public'));
 
 var bubbles = {}; // in-memory store
 
-app.get('/', function home(req, res) {
-  res.redirect('index.html');
-});
+// normal app.verb still work
+// but we can use routers
+var router = express.Router();
 
-app.get('/bubbles', function list(req, res) {
-    res.json(200, bubbles);
-});
+router.route('/')
+    .get(function home(req, res) {
+        res.redirect('index.html');
+    });
 
-app.post('/bubbles', function create(req, res) {
-    var uuid = crypto.randomBytes(20).toString('hex');
+router.route('/bubbles')
+    .get(function list(req, res) {
+        res.json(200, bubbles);
+    })
+    .post(function create(req, res) {
+        var uuid = crypto.randomBytes(20).toString('hex');
 
-    var bubble = req.body; // XXX no validation, please be kind
-    bubble.uuid = uuid;
-    bubble.timestamp = Date.now();
+        var bubble = req.body; // XXX no validation, please be kind
+        bubble.uuid = uuid;
+        bubble.timestamp = Date.now();
 
-    bubbles[uuid] = bubble;
-    res.json(200, bubble);
-});
+        bubbles[uuid] = bubble;
+        res.json(200, bubble);
+    });
 
-app.get('/bubbles/:id', function detail(req, res) {
-    res.json(200, bubbles[req.params.id]);
-});
+// param triggers
+router.param('id', function (req, res, next, id) {
+    if (!bubbles[id]) {
+        logger.warn('bubble id %s not found', id)
+        res.json(404, 'not found');
+    } else {
+        logger.info('bubble id %d', id);
+        next();
+    }
+})
 
-app.delete('/bubbles/:id', function remove(req, res) {
-    delete bubbles[req.params.id];
-    res.json(204, {});
-});
+router.route('/bubbles/:id')
+    .get(function detail(req, res) {
+        res.json(200, bubbles[req.params.id]);
+    })
+    .delete(function remove(req, res) {
+        delete bubbles[req.params.id];
+        res.json(204, {});
+    });
+
+app.use('/', router);
 
 var server = app.listen(4000, function onstart() {
   logger.info('ready');
