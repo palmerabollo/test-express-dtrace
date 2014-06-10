@@ -1,0 +1,14 @@
+{
+  "name": "test-express-dtrace",
+  "version": "1.0.0",
+  "description": "Demo using Express and DTrace",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/palmerabollo/test-express-dtrace.git"
+  },
+  "author": "Guido García",
+  "dependencies": {
+    "express": "^3.10.4"
+  }
+}
