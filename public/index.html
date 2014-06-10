@@ -1,0 +1,84 @@
+<html>
+<head>
+    <script src='//cdnjs.cloudflare.com/ajax/libs/d3/3.4.8/d3.min.js'></script>
+    <script src='//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
+    <script src='//rawgit.com/davidmerfield/randomColor/master/randomColor.js'></script>
+</head>
+<body>
+</body>
+
+<script>
+    $(document).ready(function onready() {
+        $(document).ajaxError(function () {
+            alert('ajax error');
+        });
+
+        var color = randomColor();
+        var svg = d3.select('body').append('svg')
+                                   .attr('width', '100%').attr('height', '100%');
+
+        function getOpacity(timestamp) {
+            var opacity = -0.05 * (Date.now() - timestamp) / 1000 + 1;
+            if (opacity < 0.1) {
+                opacity = 0.1;
+            }
+            return opacity.toFixed(2);
+        }
+
+        setInterval(function refresh() {
+            $.get('/bubbles').done(function (bubbles) {
+                for (uuid in bubbles) {
+                    var info = bubbles[uuid];
+                    var exists = $("#id-" + uuid).length;
+
+                    if (!exists) {
+                        var circle = svg.append('circle');
+                        circle.attr('id', "id-" + uuid)
+                              .attr('cx', info.cx)
+                              .attr('cy', info.cy)
+                              .attr('r', info.r)
+                              .style('fill', info.color)
+                              .style('fill-opacity', getOpacity(info.timestamp));
+                    } else {
+                        svg.select('#id-' + uuid)
+                           .style('fill-opacity', getOpacity(info.timestamp));
+                    }
+                }
+            });
+        }, 500);
+
+        $(document).mousedown(function startbubble(e) {
+            var circle = svg.append('circle');
+            circle.attr('cx', e.pageX - 1)
+                  .attr('cy', e.pageY - 1)
+                  .attr('r', 1)
+                  .style('fill', color)
+                  .style('fill-opacity', 1);
+
+            var interval = setInterval(function incradius() {
+                var r = Number(circle.attr('r')) + 1;
+                circle.attr('r', r)
+                      .attr('cx', e.pageX)
+                      .attr('cy', e.pageY);
+            }, 50);
+
+            $(document).mouseup(function endbubble() {
+                clearInterval(interval);
+                $(document).unbind('mouseup');
+
+                var bubble = {
+                    cx: e.pageX,
+                    cy: e.pageY,
+                    r: circle.attr('r'),
+                    color: color
+                };
+
+                $.ajax({type: 'POST', url: '/bubbles', data: bubble})
+                    .done(function (bubble) {
+                        circle.attr('id', 'id-' + bubble.uuid);
+                    });
+            });
+        });
+    });
+</script>
+</html>

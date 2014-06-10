@@ -10,6 +10,6 @@
   "author": "Guido García",
   "dependencies": {
     "express": "^3.10.4",
-    "ejs": "^1.0.0"
+    "bunyan": "^0.23.1"
   }
 }
