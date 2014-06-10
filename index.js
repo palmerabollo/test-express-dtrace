@@ -2,6 +2,9 @@ var express = require('express');
 var app = express();
 
 app.configure(function () {
+  app.set('view engine', 'ejs');
+  app.set('views', __dirname + '/views');
+
   app.use(express.responseTime());
   app.use(express.logger());
 
@@ -11,7 +14,7 @@ app.configure(function () {
 });
 
 app.get('/', function home(req, res, next) {
-  res.send('hello world');
+  res.render('index');
 });
 
 var server = app.listen(4000, function onstart() {
