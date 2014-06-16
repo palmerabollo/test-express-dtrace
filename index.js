@@ -5,6 +5,14 @@ var express = require('express'),
     crypto = require('crypto'),
     logger = require('bunyan').createLogger({name: 'myapp'});
 
+// declare dtrace probes
+var dtrace = require('dtrace-provider');
+var provider = dtrace.createDTraceProvider("bubbles");
+var probeStart = provider.addProbe("bubble-start", "char *");
+var probeEnd = provider.addProbe("bubble-end");
+// make the provider visible to dtrace
+provider.enable();
+
 var app = express();
 
 // no app.configure
@@ -30,14 +38,22 @@ router.route('/bubbles')
         res.json(200, bubbles);
     })
     .post(function create(req, res) {
+        // XXX no validation on req.body, please be kind
+
+        // we fire the probes here ...
+        probeStart.fire(function() { return [req.body.color] });
+
         var uuid = crypto.randomBytes(20).toString('hex');
 
-        var bubble = req.body; // XXX no validation, please be kind
+        var bubble = req.body;
         bubble.uuid = uuid;
         bubble.timestamp = Date.now();
 
         bubbles[uuid] = bubble;
         res.json(200, bubble);
+
+        // ... and here
+        probeEnd.fire(function() { return [] });
     });
 
 // param triggers
